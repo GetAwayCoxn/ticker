@@ -11,7 +11,7 @@
 * (at your option) any later version.
 *
 * Ashita is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* but WITHOUT ANY WARRANTY without even the implied warranty of
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 * GNU General Public License for more details.
 *
@@ -19,15 +19,17 @@
 * along with Ashita.  If not, see <https://www.gnu.org/licenses/>.
 --]]
 
-addon.author   = 'Almavivaconte (ported to Ashita v4 by Zal Das, GetAwayCoxn)';
-addon.name     = 'ticker';
-addon.version  = '1.0';
+addon.author   = 'Almavivaconte (ported to Ashita v4 by Zal Das, updated by GetAwayCoxn)'
+addon.name     = 'ticker'
+addon.version  = '1.1'
+addon.desc     = 'A simple text box to display when your next resting tick is going to happen'
+addon.link	   = 'https://github.com/clanofartisans/ticker'
 
-require ('common');
-local settings = require('settings');
-local fonts = require('fonts');
-local display = {};
-local osd = {};
+require ('common')
+local settings = require('settings')
+local fonts = require('fonts')
+local display = {}
+local osd = {}
 local defaults = T{
 	visible = true,
 	font_family = 'Arial',
@@ -39,58 +41,76 @@ local defaults = T{
 		visible = true,
 		color = 0xFF000000,
 	}
-};
+}
+local tickTime = 21
+local _timer = 0
+local lastHP = nil
+local lastMP = nil
 
-local tickTime = 20;
-local party = AshitaCore:GetMemoryManager():GetParty();
-local _timer = 0;
 
 ashita.events.register('load', 'load_cb', function()
-    osd.settings = settings.load(defaults);
+    osd.settings = settings.load(defaults)
     
-    display = fonts.new(osd.settings);
-end);
+	settings.register('settings', 'settings_update', function (s)
+		if s then osd.settings = s end
+		settings.save()
+	end)
+	
+	display = fonts.new(osd.settings)
+end)
 
 ashita.events.register('unload', 'unload_cb', function()
-    settings.save();
+    settings.save()
 
-    if (display ~= nil) then
-		display:destroy();
+    if display then display:destroy() end
+end)
+
+ashita.events.register('d3d_present', 'present_cb', function()
+	if display.position_x ~= osd.settings.position_x or display.position_y ~= osd.settings.position_y then
+		osd.settings.position_x = display.position_x
+		osd.settings.position_y = display.position_y
+		settings.save()
 	end
-end);
-
-ashita.events.register('d3d_present', 'present_cb', function ()
-	-- only run this once a second
-	if (os.time() >= _timer + 1) then
-		_timer = os.time();
-
-		selfIndex = party:GetMemberTargetIndex(0);
-		if selfIndex ~= nil then
-			local me = GetEntity(selfIndex)
-			if me ~= nil then
-				currentStatus = me.Status;
-			end
-		end
-
-		if currentStatus ~= nil then
-			if currentStatus == 33 then
-				display.text = tostring(tickTime);
-				display.visible = true;
-				if tickTime > 1 then
-					tickTime = tickTime - 1;
-				else
-					tickTime = 10;
-				end 
+	local party = AshitaCore:GetMemoryManager():GetParty()
+	local currentHP = party:GetMemberHP(0)
+	local currentHPP = party:GetMemberHPPercent(0)
+	local currentMP = party:GetMemberMP(0)
+	local currentMPP = party:GetMemberMPPercent(0)
+	local selfIndex = party:GetMemberTargetIndex(0)
+	local me = GetEntity(selfIndex)
+	local currentStatus = 0
+	
+	if not selfIndex or not currentHPP or not currentHP or not currentMPP or not currentMP or not me then return end
+	
+	currentStatus = me.Status
+	display.visible = false
+	
+	if currentStatus == 33 then
+		display.visible = true
+		if currentHPP == 100 and currentMPP == 100 then
+			display.text = "Ready!"
+			tickTime = 21
+		elseif lastHP and currentHP > lastHP + 9 or lastMP and currentMP > lastMP + 9 then
+			_timer = os.time()
+			lastHP = currentHP
+			lastMP = currentMP
+			tickTime = 10
+			display.text = tostring(tickTime)
+		elseif os.time() >= _timer + 1 then
+			_timer = os.time()
+			if tickTime <= 0 then
+				display.text = display.text .. "."
 			else
-				tickTime = 20;
-				display.visible = false;
+				tickTime = tickTime - 1
+				display.text = tostring(tickTime)
 			end
 		end
+	else
+		if lastHP ~= currentHP then
+			lastHP = currentHP
+		elseif lastMP ~= currentMP then
+			lastMP = currentMP
+		end
+		tickTime = 21
 	end
-
-    if display.position_x ~= osd.settings.position_x or display.position_y ~= osd.settings.position_y then
-        osd.settings.position_x = display.position_x;
-        osd.settings.position_y = display.position_y;
-        settings.save();
-    end
-end);
+end)

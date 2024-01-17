@@ -86,11 +86,18 @@ ashita.events.register('d3d_present', 'present_cb', function()
 	display.visible = false
 	
 	if currentStatus == 33 then
+		local buffs = AshitaCore:GetMemoryManager():GetPlayer():GetBuffs()
+		local regen = false
+		for _, buff in pairs(buffs) do
+			if buff == 42 or buff == 539 then
+				regen = true
+			end
+		end
 		display.visible = true
 		if currentHPP == 100 and currentMPP == 100 then
 			display.text = "Ready!"
 			tickTime = 21
-		elseif lastHP and currentHP > lastHP + 9 or lastMP and currentMP > lastMP + 9 then
+		elseif (not regen and lastHP and currentHP > lastHP + 9) or (lastMP and currentMP > lastMP + 9) then
 			_timer = os.time()
 			lastHP = currentHP
 			lastMP = currentMP

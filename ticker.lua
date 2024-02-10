@@ -94,7 +94,7 @@ ashita.events.register('d3d_present', 'present_cb', function()
 			end
 		end
 		display.visible = true
-		if currentHPP == 100 and currentMPP == 100 then
+		if currentHPP == 100 and currentMPP == 100 or currentHPP == 100 and currentMP == 0 then
 			display.text = "Ready!"
 			tickTime = 21
 		elseif (not regen and lastHP and currentHP > lastHP + 9) or (lastMP and currentMP > lastMP + 9) then

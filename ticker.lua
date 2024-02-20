@@ -103,6 +103,9 @@ ashita.events.register('d3d_present', 'present_cb', function()
 			lastMP = currentMP
 			tickTime = 10
 			display.text = tostring(tickTime)
+		elseif not lastHP or not lastMP then
+			lastHP = currentHP
+			lastMP = currentMP
 		elseif os.time() >= _timer + 1 then
 			_timer = os.time()
 			if tickTime <= 0 then
